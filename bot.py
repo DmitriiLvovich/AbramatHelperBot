@@ -1,37 +1,51 @@
 import os
-from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
++import sys
++import logging
+ from telegram import Update
+ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
-# 1. Берём токен из секретов Replit (Environment Secret)
-TOKEN = os.getenv("BOT_TOKEN")
++# Включим логирование в stdout, чтобы всё сразу шло в лог Railway
++logging.basicConfig(
++    format="%(asctime)s — %(name)s — %(levelname)s — %(message)s",
++    level=logging.INFO
++)
++logger = logging.getLogger(__name__)
 
-# 2. Обработчик команды /start
-def start_handler(update: Update, context: CallbackContext):
-    update.message.reply_text("Привет! Введите код доступа:")
+ # 1. Берём токен из секретов Replit / Railway (Environment Secret)
+ TOKEN = os.getenv("BOT_TOKEN")
++if not TOKEN:
++    # если токен не установлен — сразу выйдем и напишем это в лог
++    logger.error("BOT_TOKEN не найден в окружении! Задать переменную BOT_TOKEN нужно в настройках Railway.")
++    sys.exit(1)
++else:
++    logger.info("BOT_TOKEN успешно загружен.")
 
-# 3. Обработка любого текстового сообщения (после входа)
-#    Здесь позже будет ваша логика поиска по каталогу и построения таблицы
-def message_handler(update: Update, context: CallbackContext):
-    text = update.message.text
-    # TODO: заменить заглушку на реальный поиск аналогов
-    if text.lower() == "abraforce2025":
-        update.message.reply_text("Пароль верный! Теперь отправьте запрос на подбор аналогов.")
-    else:
-        update.message.reply_text(f"Вы написали:\n{text}\n(здесь будет ваш поиск аналогов)")
+ def start_handler(update: Update, context: CallbackContext):
+     update.message.reply_text("Привет! Введите код доступа:")
 
-def main():
-    # 4. Создаём Updater и Dispatcher
-    updater = Updater(TOKEN, use_context=True)
-    dp = updater.dispatcher
+ def message_handler(update: Update, context: CallbackContext):
+     text = update.message.text
+     if text.lower() == "abraforce2025":
+         update.message.reply_text("Пароль верный! Теперь отправьте запрос на подбор аналогов.")
+     else:
+         update.message.reply_text(f"Вы написали:\n{text}\n(здесь будет ваш поиск аналогов)")
 
-    # 5. Регистрируем обработчики
-    dp.add_handler(CommandHandler("start", start_handler))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, message_handler))
+ def main():
+-    updater = Updater(TOKEN, use_context=True)
++    # проверяем, что Updater удаётся инициализировать
++    try:
++        updater = Updater(TOKEN, use_context=True)
++    except Exception as e:
++        logger.exception("Не удалось создать Updater:")
++        sys.exit(1)
+     dp = updater.dispatcher
 
-    # 6. Запускаем опрос Telegram (polling)
-    print("Bot is starting polling...")
-    updater.start_polling()
-    updater.idle()
+     dp.add_handler(CommandHandler("start", start_handler))
+     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, message_handler))
 
-if __name__ == "__main__":
-    main()
+     print("Bot is starting polling...")
+     updater.start_polling()
+     updater.idle()
+
+ if name == "__main__":
+     main()
